@@ -1,3 +1,6 @@
 #!/usr/bin/env bash
-build/Debug/pkeyencrypt --enc --infile python.zip --outfile python_pk.enc --key testpub.pem -w
+# build/Debug/pkeyencrypt --enc --infile python.zip --outfile python_pk.enc --key testpub.pem -w
 # build/Debug/pkeyencrypt --enc --infile foo --outfile foo.enc --key testpub.pem -w
+# build/Debug/pkeyencrypt --enc --infile empty --outfile empty.enc --key testpub.pem -w
+# build/Debug/pkeyencrypt --enc --infile onebyte --outfile onebyte.enc --key testpub.pem -w
+build/Debug/pkeyencrypt --enc --infile python.zip --outfile python_pk.dat --key gcsarchivepubkey.pem -w

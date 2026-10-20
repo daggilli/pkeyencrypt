@@ -108,7 +108,6 @@ namespace PKeyEncrypt {
           tempPath_{tempname(truePath_)},
           outputStream_{tempPath_, std::ios_base::binary} {
       auto tmp = tempname(FileOperations::canonicalise(filename));
-      std::println("{}", tmp.string());
     }
     ~OutputStream() {
       if (!committed_) {

@@ -20,7 +20,9 @@ namespace PKeyEncrypt {
   namespace fs = std::filesystem;
 
   void seal(const CommandLine::CommandLineOptions& options) {
+#ifdef LOGGING
     auto logfile = std::ofstream("encrypt.log");
+#endif
     FilePtr keyFile(std::fopen(options.keyfile().c_str(), "rb"), &std::fclose);
 
     auto publicKey = PublicKey(keyFile.get());
@@ -32,6 +34,7 @@ namespace PKeyEncrypt {
       throw std::runtime_error("Generate AES key failed");
     }
 
+#ifdef LOGGING
     auto i = 0u;
 
     logfile << "AES KEY:\n";
@@ -42,17 +45,20 @@ namespace PKeyEncrypt {
     }
 
     logfile << '\n';
+#endif
 
     if ((RAND_bytes(nonceBuffer.buffer.data(), GCM_NONCE_BYTES)) != 1) {
       throw std::runtime_error("Generate GCM nonce failed");
     }
 
+#ifdef LOGGING
     logfile << "NONCE: ";
     for (auto e : nonceBuffer.buffer) {
       logfile << std::format("{:02X} ", e);
     }
 
     logfile << '\n';
+#endif
 
     PKeyCtx pkCtx(EVP_PKEY_CTX_new(publicKey.key(), nullptr), &EVP_PKEY_CTX_free);
 
@@ -83,6 +89,7 @@ namespace PKeyEncrypt {
 
     wrappedKey.resize(wrappedLength);
 
+#ifdef LOGGING
     i = 0u;
 
     logfile << "WRAPPED KEY:\n";
@@ -93,6 +100,7 @@ namespace PKeyEncrypt {
     }
 
     logfile << '\n';
+#endif
 
     CipherCtx ciphCtx(EVP_CIPHER_CTX_new());
 
@@ -117,6 +125,7 @@ namespace PKeyEncrypt {
     std::fill(header.begin() + GCM_TAG_OFFSET, header.begin() + GCM_TAG_OFFSET + GCM_TAG_BYTES, 0);
     std::memcpy(header.data() + AES_WRAPPED_KEY_OFFSET, wrappedKey.data(), AES_WRAPPED_KEY_BYTES);
 
+#ifdef LOGGING
     i = 0u;
     logfile << "HEADER:\n";
     for (auto e : header) {
@@ -126,6 +135,7 @@ namespace PKeyEncrypt {
     }
 
     logfile << '\n';
+#endif
 
     int len = 0;
 
@@ -136,7 +146,6 @@ namespace PKeyEncrypt {
     std::vector<unsigned char> ciphertext(BLOCK_SIZE);
 
     std::ifstream inputFile(options.inputfile(), std::ios_base::binary);
-    // std::ofstream outputFile(options.outputfile(), std::ios_base::binary);
     OutputStream outputFile(options.outputfile());
     outputFile.write(reinterpret_cast<const char*>(header.data()), HEADER_LEN);
 
@@ -173,12 +182,14 @@ namespace PKeyEncrypt {
     if (EVP_CIPHER_CTX_ctrl(ciphCtx.get(), EVP_CTRL_GCM_GET_TAG, GCM_TAG_BYTES, gcmTag.data()) != 1)
       throw std::runtime_error("GCM tag retrieval failed");
 
+#ifdef LOGGING
     logfile << "GDM TAG: ";
     for (auto e : gcmTag) {
       logfile << std::format("{:02X} ", e);
     }
 
     logfile << '\n';
+#endif
 
     // Patch the tag into the header.
     outputFile.stream().seekp(GCM_TAG_OFFSET, std::ios::beg);
@@ -195,7 +206,9 @@ namespace PKeyEncrypt {
   }
 
   void open(const CommandLine::CommandLineOptions& options) {
+#ifdef LOGGING
     auto logfile = std::ofstream("decrypt.log");
+#endif
 
     FilePtr keyFile(std::fopen(options.keyfile().c_str(), "rb"), &std::fclose);
 
@@ -206,12 +219,14 @@ namespace PKeyEncrypt {
 
     inputFile.read(reinterpret_cast<char*>(headerStart.data()), headerStart.size());
 
+#ifdef LOGGING
     logfile << "HDR START: ";
     for (auto e : headerStart) {
       logfile << std::format("{:02X} ", e);
     }
 
     logfile << '\n';
+#endif
 
     if (!std::equal(headerStart.begin(), headerStart.begin() + MAGIC_LEN, MAGIC))
       throw std::runtime_error("Magic number invalid");
@@ -226,6 +241,7 @@ namespace PKeyEncrypt {
 
     inputFile.read(reinterpret_cast<char*>(header.data() + NONCE_OFFSET), headerLen - NONCE_OFFSET);
 
+#ifdef LOGGING
     auto i = 0u;
     logfile << "HEADER:\n";
     for (auto e : header) {
@@ -235,6 +251,7 @@ namespace PKeyEncrypt {
     }
 
     logfile << '\n';
+#endif
 
     std::vector<unsigned char> nonceBuffer(nonceLen);
     std::memcpy(nonceBuffer.data(), header.data() + NONCE_OFFSET, nonceLen);
@@ -243,6 +260,7 @@ namespace PKeyEncrypt {
     std::vector<unsigned char> gcmTag(GCM_TAG_BYTES);
     std::memcpy(gcmTag.data(), header.data() + gcmTagOffset, GCM_TAG_BYTES);
 
+#ifdef LOGGING
     logfile << "NONCE: ";
     for (auto e : nonceBuffer) {
       logfile << std::format("{:02X} ", e);
@@ -256,9 +274,12 @@ namespace PKeyEncrypt {
     }
 
     logfile << '\n';
+#endif
 
     std::vector<unsigned char> wrappedKey(AES_WRAPPED_KEY_BYTES);
     std::memcpy(wrappedKey.data(), header.data() + AES_WRAPPED_KEY_OFFSET, AES_WRAPPED_KEY_BYTES);
+
+#ifdef LOGGING
     i = 0u;
 
     logfile << "WRAPPED KEY:\n";
@@ -269,9 +290,11 @@ namespace PKeyEncrypt {
     }
 
     logfile << '\n';
+#endif
 
     std::fill(header.begin() + gcmTagOffset, header.begin() + gcmTagOffset + GCM_TAG_BYTES, 0);
 
+#ifdef LOGGING
     i = 0u;
     logfile << "AAD HEADER:\n";
     for (auto e : header) {
@@ -281,7 +304,7 @@ namespace PKeyEncrypt {
     }
 
     logfile << '\n';
-
+#endif
     PKeyCtx pkCtx(EVP_PKEY_CTX_new(privateKey.key(), nullptr), &EVP_PKEY_CTX_free);
 
     if (!pkCtx) throw std::runtime_error("EVP_PKEY_CTX_new failed");
@@ -311,6 +334,7 @@ namespace PKeyEncrypt {
 
     if (keyLen != AES_KEY_BYTES) throw std::runtime_error("Invalid AES session key length");
 
+#ifdef LOGGING
     i = 0u;
 
     logfile << "TEMP AES KEY:\n";
@@ -321,11 +345,13 @@ namespace PKeyEncrypt {
     }
 
     logfile << '\n';
+#endif
 
     auto aesBuffer = SecureBuffer(AES_KEY_BYTES);
 
     std::memcpy(aesBuffer.buffer.data(), tempAesBuffer.buffer.data(), AES_KEY_BYTES);
 
+#ifdef LOGGING
     i = 0u;
 
     logfile << "AES KEY:\n";
@@ -336,6 +362,7 @@ namespace PKeyEncrypt {
     }
 
     logfile << '\n';
+#endif
 
     CipherCtx ciphCtx(EVP_CIPHER_CTX_new());
 

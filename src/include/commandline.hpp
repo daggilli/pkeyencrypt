@@ -90,7 +90,9 @@ namespace PKeyEncrypt::CommandLine {
       }
     }
 
-    static void usage() { std::println("Usage : TODO"); }
+    static void usage() {
+      std::println("Usage : pkeyencrypt --enc | --dec --infile <input> --outfile <output> --key <key> [-w]");
+    }
 
     const auto mode() const { return mode_.value(); }
     const auto& inputfile() const { return inputfile_; }

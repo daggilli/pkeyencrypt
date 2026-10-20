@@ -27,15 +27,15 @@ if(CMAKE_CXX_STANDARD GREATER_EQUAL 26)
     add_compile_options(-Wno-deprecated)
 endif()
 
-add_executable(pkeyencrypt
+add_executable(${EXE}
     main.cpp
     pkeyencrypt.cpp
 )
 
 target_include_directories(${EXE} PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
-target_link_libraries(pkeyencrypt OpenSSL::Crypto)
+target_link_libraries(${EXE} OpenSSL::Crypto)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(pkeyencrypt PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(${EXE} PRIVATE -Wall -Wextra -Wpedantic)
 endif()

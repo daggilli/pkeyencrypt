@@ -1,0 +1,4 @@
+#!/usr/bin/erv bash
+# compare file1.bin to file2.bin byte for byte
+# needs gawk
+cmp -l file1.bin file2.bin | gawk '{printf "%08X %02X %02X\n", $1-1, strtonum(0$2), strtonum(0$3)}'

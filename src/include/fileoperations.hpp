@@ -29,7 +29,7 @@ namespace PKeyEncrypt::FileOperations {
     duplicateFilenameErr,
   };
 
-  static FileError validateFiles(const CommandLine::CommandLineOptions& options) {
+  inline FileError validateFiles(const CommandLine::CommandLineOptions& options) {
     auto inputfilepath = canonicalise(options.inputfile());
     if (!fs::exists(inputfilepath)) return inputFileNotFoundErr;
 
@@ -88,12 +88,10 @@ namespace PKeyEncrypt::FileOperations {
       }
     }
 
-    std::println("{} {} {}", inputfilepath.string(), outputfilepath.string(), keyfilepath.string());
-
     return noErr;
   }
 
-  constexpr static std::optional<std::string> diagnoseError(const FileError err) {
+  constexpr std::optional<std::string> diagnoseError(const FileError err) {
     std::optional<std::string> message;
 
     switch (err) {
@@ -153,7 +151,7 @@ namespace PKeyEncrypt::FileOperations {
     return message;
   }
 
-  inline static fs::path canonicalise(const std::string& pathstr) {
+  inline fs::path canonicalise(const std::string& pathstr) {
     return fs::weakly_canonical(fs::absolute(pathstr));
   }
 }  // namespace PKeyEncrypt::FileOperations
