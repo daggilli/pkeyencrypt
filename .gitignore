@@ -1,0 +1,16 @@
+*.o
+*.d
+.clang-format
+build
+.vscode
+.DS_Store
+scripts
+docs
+config
+*.log
+*.pem
+python*
+ranfile
+foo*
+*.enc
+*.dec

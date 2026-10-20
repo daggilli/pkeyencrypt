@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# build/Debug/pkeyencrypt --dec --infile foo.enc --outfile foo.dec --key testpriv.pem -w
+build/Debug/pkeyencrypt --dec --infile python_pk.enc --outfile python_dec.zip --key testpriv.pem -w
