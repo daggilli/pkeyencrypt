@@ -4,9 +4,11 @@
 #include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/rand.h>
+#include <sys/mman.h>
 
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <format>
 #include <functional>
@@ -18,6 +20,7 @@
 
 #include "commandline.hpp"
 #include "fileoperations.hpp"
+
 constexpr int AES_KEY_BYTES = 32;
 constexpr int GCM_NONCE_BYTES = 12;
 constexpr int GCM_TAG_BYTES = 16;
@@ -45,18 +48,29 @@ namespace PKeyEncrypt {
   namespace fs = std::filesystem;
 
   struct SecureBuffer {
-    explicit SecureBuffer(std::size_t size) : buffer(size) {}
-    ~SecureBuffer() {
-      if (!buffer.empty()) OPENSSL_cleanse(buffer.data(), buffer.size());
+    explicit SecureBuffer(std::size_t size) : buffer(size) {
+      if (size && ::mlock(buffer.data(), size)) {
+        throw std::runtime_error("SecureBuffer mlock() failed");
+      }
+    }
+    ~SecureBuffer() noexcept {
+      if (!buffer.empty()) {
+        ::explicit_bzero(buffer.data(), buffer.size());
+        OPENSSL_cleanse(buffer.data(), buffer.size());
+        ::munlock(buffer.data(), buffer.size());
+      }
     }
 
     std::vector<uint8_t> buffer;
 
     SecureBuffer(const SecureBuffer&) = delete;
     SecureBuffer& operator=(const SecureBuffer&) = delete;
+    SecureBuffer(SecureBuffer&&) = delete;
+    SecureBuffer& operator=(SecureBuffer&&) = delete;
   };
 
-  struct PublicKey {
+  class PublicKey {
+   public:
     PublicKey(FILE* fp) : key_(PEM_read_PUBKEY(fp, nullptr, nullptr, nullptr)) {
       if (key_ == nullptr) {
         throw std::runtime_error("PEM_read_PUBKEY failed");
@@ -64,6 +78,8 @@ namespace PKeyEncrypt {
     }
     PublicKey(const PublicKey&) = delete;
     PublicKey& operator=(const PublicKey&) = delete;
+    PublicKey(PublicKey&&) = delete;
+    PublicKey& operator=(PublicKey&&) = delete;
     ~PublicKey() {
       if (key_) EVP_PKEY_free(key_);
     }
@@ -74,7 +90,8 @@ namespace PKeyEncrypt {
     EVP_PKEY* key_;
   };
 
-  struct PrivateKey {
+  class PrivateKey {
+   public:
     PrivateKey(FILE* fp) : key_(PEM_read_PrivateKey(fp, nullptr, nullptr, nullptr)) {
       if (!key_) {
         throw std::runtime_error("PEM_read_PUBKEY failed");
@@ -82,6 +99,8 @@ namespace PKeyEncrypt {
     }
     PrivateKey(const PrivateKey&) = delete;
     PrivateKey& operator=(const PrivateKey&) = delete;
+    PrivateKey(PrivateKey&&) = delete;
+    PrivateKey& operator=(PrivateKey&&) = delete;
     ~PrivateKey() {
       if (key_) {
         EVP_PKEY_free(key_);
@@ -102,7 +121,8 @@ namespace PKeyEncrypt {
     }
   };
 
-  struct OutputStream {
+  class OutputStream {
+   public:
     OutputStream(const std::string& filename)
         : truePath_{FileOperations::canonicalise(filename)},
           tempPath_{tempname(truePath_)},
@@ -115,14 +135,14 @@ namespace PKeyEncrypt {
         fs::remove(tempPath_);
       }
     }
-    std::ofstream& stream() noexcept { return outputStream_; }
-    const std::ofstream& stream() const noexcept { return outputStream_; }
+    auto& stream() noexcept { return outputStream_; }
+    const auto& stream() const noexcept { return outputStream_; }
 
-    std::ostream& write(const char* s, std::streamsize count) { return outputStream_.write(s, count); }
+    auto& write(const char* s, std::streamsize count) { return outputStream_.write(s, count); }
 
     void commit() {
       outputStream_.flush();
-      if (!outputStream_) throw std::runtime_error("Flusing output failed");
+      if (!outputStream_) throw std::runtime_error("Flushing output failed");
       outputStream_.close();
       if (!outputStream_) throw std::runtime_error("Closing output failed");
       fs::rename(tempPath_, truePath_);

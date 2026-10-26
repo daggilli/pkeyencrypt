@@ -24,7 +24,7 @@ option(ENABLE_ASAN "Enable AddressSanitizer in Debug" OFF)
 
 # Suppress warnings about deprecated is_trivial_v in C++26
 if(CMAKE_CXX_STANDARD GREATER_EQUAL 26)
-    add_compile_options(-Wno-deprecated)
+  add_compile_options(-Wno-deprecated)
 endif()
 
 add_executable(${EXE}
@@ -32,10 +32,45 @@ add_executable(${EXE}
     pkeyencrypt.cpp
 )
 
+target_compile_options(${EXE} PRIVATE
+  -Wall -Wextra -Wpedantic
+  $<$<CONFIG:Debug>:-g -O1 -DDEBUG -fno-omit-frame-pointer>
+  $<$<CONFIG:Release>: -O4 -DNODEBUG -ffunction-sections -fdata-sections -fno-plt>
+  $<$<AND:$<CONFIG:Debug>,$<BOOL:${ENABLE_ASAN}>>:-fsanitize=address>
+)
+
+target_link_options(${EXE} PRIVATE
+  $<$<CONFIG:Release>: -Wl,--gc-sections -Wl,--as-needed>
+  $<$<AND:$<CONFIG:Debug>,$<BOOL:${ENABLE_ASAN}>>:-fsanitize=address>
+)
+
 target_include_directories(${EXE} PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
 target_link_libraries(${EXE} OpenSSL::Crypto)
 
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(${EXE} PRIVATE -Wall -Wextra -Wpedantic)
-endif()
+include(GNUInstallDirs)
+
+install(TARGETS ${PROJECT_NAME}
+  EXPORT ${PROJECT_NAME}_Targets
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  "${PROJECT_NAME}ConfigVersion.cmake"
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+  "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake.in"
+  "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake
+)
+
+install(
+  FILES
+  "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+  "${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake
+)

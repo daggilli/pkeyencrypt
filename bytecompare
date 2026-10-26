@@ -1,4 +1,13 @@
-#!/usr/bin/erv bash
-# compare file1.bin to file2.bin byte for byte
+#!/usr/bin/env bash
+# compare file1 to file2 byte for byte
 # needs gawk
-cmp -l file1.bin file2.bin | gawk '{printf "%08X %02X %02X\n", $1-1, strtonum(0$2), strtonum(0$3)}'
+if [ "$#" -lt 2 ]; then
+  echo usage: $(basename $0) file1 file2
+  exit
+fi
+if [ "$1" == "$2" ]; then
+  echo file1 and file2 must differ
+  exit
+fi
+
+cmp -l "$1" "$2" | gawk '{printf "%08X %02X %02X\n", $1-1, strtonum(0$2), strtonum(0$3)}'

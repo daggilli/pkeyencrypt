@@ -203,7 +203,7 @@ namespace PKeyEncrypt {
     }
 
     outputFile.commit();
-  }
+  }  // end seal()
 
   void open(const CommandLine::CommandLineOptions& options) {
 #ifdef LOGGING
@@ -418,5 +418,5 @@ namespace PKeyEncrypt {
     }
 
     outputFile.commit();
-  }
+  }  // end open()
 }  // namespace PKeyEncrypt
