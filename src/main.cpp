@@ -32,11 +32,5 @@ int main(int argc, char *argv[]) {
 
   options.mode() ? seal(options) : open(options);
 
-  // if (options.mode()) {
-  //   seal(options);
-  // } else {
-  //   open(options);
-  // }
-
   return EXIT_SUCCESS;
 }
