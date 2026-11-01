@@ -1,0 +1,26 @@
+# generate RSA public/private key pair
+# generate private key in private.pem (supply a password)
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 -aes-256-cbc -out private.pem
+
+chmod 600 private.pem
+
+# extract public key to public.pem
+openssl pkey -in private.pem -pubout -out public.pem
+
+# verify
+openssl pkey -pubin -in public.pem -text -noout
+openssl pkey -in private.pem -check -noout
+
+# test
+echo "Sphinx of black quartz, judge my vow" > plaintext.txt
+
+# encrypt
+openssl pkeyutl -encrypt -pubin -inkey public.pem -in plaintext.txt \
+  -out ciphertext.dat -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_mgf1_md:sha256
+
+# decrypt
+openssl pkeyutl -decrypt  -inkey private.pem -in ciphertext.dat \
+  -out recovered.txt -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 -pkeyopt rsa_mgf1_md:sha256
+
+# compare
+diff plaintext.txt recovered.txt
